@@ -1,0 +1,19 @@
+---
+- name: 分发rsvip 脚本
+  template: src=rsrip.sh.j2 dest=/usr/local/bin/rsrip.sh mode=u+x
+
+- name: 添加回环地址
+  ignore_errors: yes
+  shell: "/bin/bash /usr/local/bin/rsrip.sh restart >/dev/null 2>&1"
+
+- name: rsvip添加自启
+  lineinfile:
+    dest: /etc/rc.d/rc.local
+    line: "/usr/local/bin/rsrip.sh start >/dev/null 2>&1"
+
+- name: add permission
+  file:
+    path: /etc/rc.d/rc.local
+    owner: root
+    group: root
+    mode: '0755'

@@ -1,0 +1,80 @@
+#!/bin/sh
+#
+# Startup script handle the initialisation of LVS
+# chkconfig: - 28 72
+# description: Initialise the Linux Virtual Server for DR
+#
+### BEGIN INIT INFO
+# Provides: ipvsadm
+# Required-Start: $local_fs $network $named
+# Required-Stop: $local_fs $remote_fs $network
+# Short-Description: Initialise the Linux Virtual Server
+# Description: The Linux Virtual Server is a highly scalable and highly
+#   available server built on a cluster of real servers, with the load
+#   balancer running on Linux.
+# description: start LVS of DR-RIP
+
+. /etc/rc.d/init.d/functions
+LOCK=/var/lock/ipvsadm.lock
+VIP={{ vip }}
+
+start() {
+     PID=`ifconfig | grep lo:0 | wc -l`
+     if [ $PID -ne 0 ];
+     then
+         echo "The LVS-DR-RIP Server is already running !"
+     else
+         /sbin/ifconfig lo:0 $VIP netmask 255.255.255.255 up
+         /sbin/route add -host $VIP dev lo:0
+         echo "1" >/proc/sys/net/ipv4/conf/lo/arp_ignore
+         echo "2" >/proc/sys/net/ipv4/conf/lo/arp_announce
+         echo "1" >/proc/sys/net/ipv4/conf/{{ nic }}/arp_ignore
+         echo "2" >/proc/sys/net/ipv4/conf/{{ nic }}/arp_announce
+         echo "1" >/proc/sys/net/ipv4/conf/all/arp_ignore
+         echo "2" >/proc/sys/net/ipv4/conf/all/arp_announce
+         /bin/touch $LOCK
+         echo "starting LVS-DR-RIP server is ok !"
+     fi
+}
+
+stop() {
+         /sbin/route del -host $VIP dev lo:0
+         /sbin/ifconfig lo:0 down  >/dev/null
+         echo "0" >/proc/sys/net/ipv4/conf/lo/arp_ignore
+         echo "0" >/proc/sys/net/ipv4/conf/lo/arp_announce
+         echo "0" >/proc/sys/net/ipv4/conf/{{ nic }}/arp_ignore
+         echo "0" >/proc/sys/net/ipv4/conf/{{ nic }}/arp_announce
+         echo "0" >/proc/sys/net/ipv4/conf/all/arp_ignore
+         echo "0" >/proc/sys/net/ipv4/conf/all/arp_announce
+         rm -rf $LOCK
+         echo "stopping LVS-DR-RIP server is ok !"
+}
+
+status() {
+     if [ -e $LOCK ];
+     then
+        echo "The LVS-DR-RIP Server is already running !"
+     else
+        echo "The LVS-DR-RIP Server is not running !"
+     fi
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        stop
+        start
+        ;;
+  status)
+        status
+        ;;
+  *)
+        echo "Usage: $1 {start|stop|restart|status}"
+        exit 1
+esac
+exit 0

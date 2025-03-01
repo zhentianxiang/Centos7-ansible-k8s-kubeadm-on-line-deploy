@@ -1,0 +1,40 @@
+---
+- name: 加载 br_netfilter 模块
+  shell: modprobe br_netfilter
+
+- name: seting k8s kernel
+  copy:
+    src: lvs.conf
+    dest: /etc/sysctl.d/
+
+- name: sysctl enable
+  shell: sysctl -p /etc/sysctl.d/lvs.conf
+
+- name: Add ipvs modules
+  copy:
+    src: ipvs.modules
+    dest: /etc/sysconfig/modules/
+    mode: '0755'
+
+- name: enable ipvs
+  shell: "/bin/bash /etc/sysconfig/modules/ipvs.modules"
+
+- name: 安装LVS
+  package:
+    name:
+      - openssl-devel
+      - popt-devel
+      - libnl-devel
+      - kernel-devel
+      - ipvsadm
+      - keepalived
+    state: latest
+
+- name: 拷贝keepalived配置文件       
+  template: src=keepalived.conf.j2 dest=/etc/keepalived/keepalived.conf
+
+- name: 启动lvs
+  service:
+    name: keepalived
+    state: restarted
+    enabled: yes

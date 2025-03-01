@@ -1,0 +1,16 @@
+- name: 启动 iscsid
+  systemd:
+    name: iscsid
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+
+- name: 加载内核模块
+  raw: "{{ item }}"
+  with_items:
+    - "modprobe br_netfilter"
+    - "modprobe rbd"
+    - "modprobe dm_snapshot"
+    - "modprobe dm_mirror"
+    - "modprobe dm_thin_pool"
+#    - "modprobe nvme_tcp"

@@ -1,0 +1,8 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-provisioner-storage
+  namespace: kube-system
+  annotations:
+    storageclass.beta.kubernetes.io/is-default-class: "true"  #这个是让这个storage充当默认，这里不需要就注释掉
+provisioner: example.com/nfs

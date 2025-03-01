@@ -1,0 +1,25 @@
+---
+- name: modify limits
+  lineinfile:
+    dest: /etc/security/limits.conf
+    line: "{{ item }}"
+  with_items:
+    - "* soft nproc 65535"
+    - "* hard nproc 65535"
+    - "* soft nofile 65535"
+    - "* hard nofile 65535"
+
+- name: modify limits
+  lineinfile:
+    dest: /etc/rc.d/rc.local
+    line: "ulimit -SHn 65535"
+
+- name: add permission
+  file:
+    path: /etc/rc.d/rc.local
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: temporary ulimit
+  shell: "ulimit -SHn 65535"

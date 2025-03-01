@@ -1,0 +1,40 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: nfs-provisioner
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: nfs-provisioner
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: nfs-provisioner
+    spec:
+      serviceAccount: nfs-provisioner
+      containers:
+        - name: nfs-provisioner
+          image: registry.cn-hangzhou.aliyuncs.com/open-ali/nfs-client-provisioner:latest
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+            # 注意这个值要和class里面的一致
+              value: example.com/nfs
+            - name: NFS_SERVER
+            # 注意修改地址
+              value: {{ nfs_ip }}
+            - name: NFS_PATH
+              value: {{ nfs_data }}
+      volumes:
+        - name: nfs-client-root
+          nfs:
+          # 注意修改地址
+            server: {{ nfs_ip }}
+            path: {{ nfs_data }}

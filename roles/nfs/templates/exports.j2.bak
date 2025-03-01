@@ -1,0 +1,3 @@
+{% for host in groups['k8s'] %}
+{{ nfs_data }} {{ hostvars[host].ip }}(rw,no_root_squash,async)
+{% endfor %}

@@ -1,0 +1,97 @@
+{% if lvs_name == 'lvs-master' %}
+  {% set role = 'MASTER' %}
+  {% set priority = 100 %}
+{% elif lvs_name != 'lvs-master' %}
+  {% set role = 'BACKUP' %}
+  {% set priority = 90 %}
+{% endif %}
+
+! Configuration File for keepalived 
+global_defs { 
+   notification_email { 
+     acassen@firewall.loc 
+     failover@firewall.loc 
+     sysadmin@firewall.loc 
+   } 
+   notification_email_from Alexandre.Cassen@firewall.loc  
+   smtp_server 127.0.0.1 
+   smtp_connect_timeout 30 
+   router_id K8S_{{ inventory_hostname }}
+} 
+
+vrrp_instance VI_1 {
+    state {{ role }}
+    interface {{ nic }}
+    lvs sync daemon interface {{ nic }}
+    unicast_src_ip {{ ip }}
+#    dont_track_primary
+#    nopreempt
+
+    garp_master_delay 6
+    virtual_router_id {{ Virtual_Router_ID }}
+    priority {{  priority }}
+    advert_int 1
+
+    authentication {
+        auth_type PASS
+        autp_pass LVSK8S
+    }
+    
+    unicast_peer { 
+      {% for host in groups['lvs'] %}
+      {{ hostvars[host].ip }}
+      {% endfor %}
+    }
+    
+    virtual_ipaddress {
+        {{ vip }}/32 brd {{ vip }} dev {{ nic }} label {{ nic }}:1
+    }
+
+    virtual_routes {
+        {{ vip }}/24 dev {{ nic }}
+    }
+
+#    notify_master /etc/keepalived/scripts/state_master.sh
+#    notify_backup /etc/keepalived/scripts/state_backup.sh
+#    notify_fault  /etc/keepalived/scripts/state_fault.sh
+}
+
+virtual_server {{ vip }} 6443 {
+    delay_loop 1
+    lb_algo rr
+    lb_kind DR
+    protocol TCP
+
+    {% for host in groups['master'] %} 
+    real_server {{ hostvars[host].ip }} 6443 {
+        weight 1
+
+        TCP_CHECK {
+            connect_timeout 3
+            nb_get_retry 3
+            delay_before_retry 5
+        }
+    }
+    {% endfor %} 
+
+}
+
+virtual_server {{ vip }} {{ admin_port }} {
+    delay_loop 1
+    lb_algo rr
+    lb_kind DR
+    protocol TCP
+
+    {% for host in groups['master'] %} 
+    real_server {{ hostvars[host].ip }} {{ admin_port }} {
+        weight 1
+
+        TCP_CHECK {
+            connect_timeout 3
+            nb_get_retry 3
+            delay_before_retry 5
+        }
+    } 
+    {% endfor %}
+
+}

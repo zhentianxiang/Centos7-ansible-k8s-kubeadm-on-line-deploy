@@ -1,0 +1,25 @@
+---
+- name: 等待 Kubernetes API 服务器准备好
+  wait_for:
+    host: "{{ inventory_hostname }}"  # 目标主机的名称
+    port: 16443  # Kubernetes API 服务器的端口
+    state: started
+  delegate_to: localhost
+  ignore_errors: yes  # 忽略错误，因为在 Kubernetes 启动之前可能会超时
+
+- name: 拷贝YAML文件到Master
+  copy: src={{ item }} dest={{ tmp_dir }}
+  with_fileglob:
+    - "*.yaml"
+
+- name: 部署Ingress-Nginx
+  ignore_errors: yes
+  shell: for yaml in $(ls *.yaml);do kubectl apply -f $yaml;done
+  args:
+    chdir: "{{ tmp_dir }}"
+
+- name: 提示用户手动执行自定义配置修改
+  debug:
+    msg: |
+      请手动执行以下命令来修改 kube 自定义配置：
+      1. kubectl label node [node_name] ingress/type=nginx

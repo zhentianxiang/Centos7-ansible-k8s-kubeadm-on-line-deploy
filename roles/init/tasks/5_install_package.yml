@@ -1,0 +1,21 @@
+---
+- name: install package
+  package:
+    name:
+      - ntp
+      - ntpdate
+      - rsync
+      - bash-completion
+      - net-tools
+      - wget
+      - gcc
+      - gcc-c++
+      - lrzsz
+      - vim
+      - unzip
+      - make
+      - openssl-devel
+      - iptables-services
+      - iscsi-initiator-utils
+      #- glusterfs-fuse
+    state: latest

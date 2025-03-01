@@ -1,0 +1,7 @@
+---
+- name: 升级系统内核为5.4
+  gather_facts: true
+  hosts: k8s
+  roles:
+    - update_kernel
+  tags: update_kernel

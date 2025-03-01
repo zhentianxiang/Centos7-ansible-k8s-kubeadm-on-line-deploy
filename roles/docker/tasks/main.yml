@@ -1,0 +1,54 @@
+---
+- name: install docker reta package
+  package:
+    name:
+      - yum-utils
+      - device-mapper-persistent-data
+      - lvm2
+    state: latest
+
+- name: add docker-ce repo
+  raw: yum-config-manager --add-repo {{ docker_ce_repo }}
+
+- name: install docker-ce
+  package:
+    name:
+      - "{{ docker_ce }}"
+      - "{{ docker_ce_cli }}"
+      - "{{ containerd }}"
+    state: latest
+
+- name: start docker-ce
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  register: start_result
+  until: start_result is succeeded
+  retries: 5
+  delay: 30
+
+- name: Setup docker daemon
+  template:
+    src: "daemon.json.j2"
+    dest: "/etc/docker/daemon.json"
+
+- name: mkdir docker service dir
+  raw: mkdir -p /etc/systemd/system/docker.service.d
+
+- name: restart docker-ce
+  systemd:
+    name: docker
+    state: restarted
+  register: start_result
+  until: start_result is succeeded
+  retries: 5
+  delay: 30
+
+#- name: 查看状态
+#  shell: docker info
+#  register: Docker_info
+#
+#- name: docker 状态信息
+#  debug: var=Docker_info.stdout_lines
+

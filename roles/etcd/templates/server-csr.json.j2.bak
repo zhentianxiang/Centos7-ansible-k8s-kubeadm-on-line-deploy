@@ -1,0 +1,20 @@
+{
+    "CN": "etcd",
+    "hosts": [
+        {% for host in groups['etcd'] %}
+        "{{ hostvars[host]['ansible_default_ipv4']['address'] }}",
+        "{{ host }}" {% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "L": "BeiJing",
+            "ST": "BeiJing"
+        }
+    ]
+}

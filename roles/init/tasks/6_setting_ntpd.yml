@@ -1,0 +1,37 @@
+---
+- name: delete ntp configration
+  lineinfile:
+    dest: /etc/ntp.conf
+    regexp: "^server"
+    state: absent
+
+- name: delete ntpdate configration
+  lineinfile:
+    dest: /etc/ntp/step-tickers
+    regexp: "^0"
+    state: absent
+
+- name: add ntp server
+  lineinfile:
+    dest: /etc/ntp.conf
+    line: "{{ item }}"
+  with_items:
+    - "server ntp.aliyun.com iburst"
+    - "server ntp1.aliyun.com iburst"
+
+- name: add ntpdate configration
+  lineinfile:
+    dest: /etc/ntp/step-tickers
+    line: "ntp1.aliyun.com"
+
+- name: start ntpd
+  systemd:
+    name: ntpd
+    state: started
+    enabled: yes
+
+- name: setting timezone
+  shell: "{{ item }}"
+  with_items:
+    - "timedatectl set-timezone Asia/Shanghai"
+    - "timedatectl set-local-rtc 1"

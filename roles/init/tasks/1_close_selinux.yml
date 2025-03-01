@@ -1,0 +1,15 @@
+---
+- name: Get selinux
+  shell: getenforce
+  register: sestatus
+
+- name: close selinux
+  ignore_errors: yes
+  shell: setenforce 0
+  when: sestatus.stdout != 'Disabled'
+
+- name: disabled selinux
+  replace:
+    path: /etc/selinux/config
+    regexp: "SELINUX=enforcing"
+    replace: "SELINUX=disabled"

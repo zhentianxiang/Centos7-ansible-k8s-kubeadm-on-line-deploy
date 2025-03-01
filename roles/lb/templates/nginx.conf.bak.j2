@@ -1,0 +1,221 @@
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                     'Status: $status BodyBytesSent: $body_bytes_sent '
+                     'Referer: "$http_referer" '
+                     'UserAgent: "$http_user_agent" '
+                     'XForwardedFor: "$http_x_forwarded_for" '
+                     'Upgrade: $http_upgrade Connection: $http_connection '
+                     'Host: $http_host '
+                     'CacheStatus: $upstream_cache_status '
+                     'RequestTime: $request_time';
+
+    access_log /var/log/nginx/access.log main;
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    client_max_body_size 10240m;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # 启用 Gzip 压缩
+    gzip on;
+    gzip_comp_level 9;  # 设置压缩级别为最高
+    gzip_min_length 1000;  # 只有大于1KB的文件才压缩
+    gzip_proxied any;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    # 设置缓存路径
+    proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m max_size=1g inactive=60m use_temp_path=off;
+
+    # HTTP Ingress-Nginx负载均衡
+    upstream ingress-nginx-http {
+        server 192.168.235.214:80;
+        server 192.168.235.215:80;
+        server 192.168.235.216:80;
+    }
+
+    # HTTPS Ingress-Nginx负载均衡
+    upstream ingress-nginx-https {
+        server 192.168.235.214:443;
+        server 192.168.235.215:443;
+        server 192.168.235.216:443;
+    }
+
+    # HTTP负载均衡
+    server {
+        listen 80;
+
+        # WebSocket 请求代理转发
+        location /api/v1/message/websocket {
+            proxy_pass http://ingress-nginx-http;  # 将请求转发到 Nginx 上游集群
+            proxy_http_version 1.1;  # 必须使用 HTTP/1.1 来支持 WebSocket
+            proxy_set_header Upgrade $http_upgrade;  # 设置 Upgrade 头以支持 WebSocket 协议
+            proxy_set_header Connection "upgrade";  # 设置 Connection 头以确认升级请求
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # 设置超时时间，确保 WebSocket 连接能够长时间保持
+            proxy_read_timeout 86400s;
+            proxy_send_timeout 86400s;
+        }
+
+        # WebSocket 请求代理转发（统一处理所有 wss 协议请求）
+        location ~* ^/api/notice/websocket {
+            proxy_pass https://ingress-nginx-http;  # 将请求转发到 Nginx 上游集群
+            proxy_http_version 1.1;  # 必须使用 HTTP/1.1 来支持 WebSocket
+            proxy_set_header Upgrade $http_upgrade;  # 设置 Upgrade 头以支持 WebSocket 协议
+            proxy_set_header Connection "upgrade";  # 设置 Connection 头以确认升级请求
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # 设置超时时间，确保 WebSocket 连接能够长时间保持
+            proxy_read_timeout 86400s;
+            proxy_send_timeout 86400s;
+        }
+
+        # 普通 HTTP 请求的转发
+        location / {
+            proxy_pass http://ingress-nginx-http;  # 普通 HTTP 上游
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 启用缓存
+            proxy_cache my_cache;
+            proxy_cache_valid 200 60m;
+            proxy_cache_use_stale error timeout updating;
+ 
+            # 只缓存GET和HEAD请求
+            proxy_cache_methods GET HEAD;
+
+            # 如果后端响应500、502、503、504等错误时，仍然使用过期缓存
+            proxy_cache_use_stale http_502 http_500 http_503 http_504;
+
+            # 设置缓存键，使用host、uri和请求参数生成唯一的缓存键
+            proxy_cache_key $host$uri$is_args$args;
+
+            # 忽略 Cache-Control 和 Set-Cookie 头部，强制缓存
+            proxy_ignore_headers Set-Cookie Cache-Control;
+
+            # 针对不同响应码设置缓存时长
+            proxy_cache_valid 200 301 302 304 10m;
+            proxy_cache_valid 500 502 503 504 1m;
+
+            # 显示缓存状态
+            add_header X-Cache-Status $upstream_cache_status;
+        }
+    }
+
+    # HTTPS负载均衡
+    server {
+        listen 443 ssl;
+        ssl_certificate /etc/nginx/cret/nginx/bytedance.indc.vnet.com.pem;
+        ssl_certificate_key /etc/nginx/cret/nginx/bytedance.indc.vnet.com.key;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384';
+        ssl_prefer_server_ciphers on;
+
+        # WebSocket 请求代理转发
+        location /api/v1/message/websocket {
+            proxy_pass https://ingress-nginx-https;  # 将请求转发到 Nginx 上游集群
+            proxy_http_version 1.1;  # 必须使用 HTTP/1.1 来支持 WebSocket
+            proxy_set_header Upgrade $http_upgrade;  # 设置 Upgrade 头以支持 WebSocket 协议
+            proxy_set_header Connection "upgrade";  # 设置 Connection 头以确认升级请求
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # 设置超时时间，确保 WebSocket 连接能够长时间保持
+            proxy_read_timeout 86400s;
+            proxy_send_timeout 86400s;
+        }
+
+        # WebSocket 请求代理转发（统一处理所有 wss 协议请求）
+        location ~* ^/api/notice/websocket {
+            proxy_pass https://ingress-nginx-https;  # 将请求转发到 Nginx 上游集群
+            proxy_http_version 1.1;  # 必须使用 HTTP/1.1 来支持 WebSocket
+            proxy_set_header Upgrade $http_upgrade;  # 设置 Upgrade 头以支持 WebSocket 协议
+            proxy_set_header Connection "upgrade";  # 设置 Connection 头以确认升级请求
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # 设置超时时间，确保 WebSocket 连接能够长时间保持
+            proxy_read_timeout 86400s;
+            proxy_send_timeout 86400s;
+        }
+
+        # 普通 HTTPS 请求的转发
+        location / {
+            proxy_pass https://ingress-nginx-https;  # 普通 HTTPS 上游
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 启用缓存
+            proxy_cache my_cache;
+            proxy_cache_valid 200 60m;
+            proxy_cache_use_stale error timeout updating;
+            
+            # 只缓存GET和HEAD请求
+            proxy_cache_methods GET HEAD;
+        
+            # 如果后端响应500、502、503、504等错误时，仍然使用过期缓存
+            proxy_cache_use_stale http_502 http_500 http_503 http_504;
+        
+            # 设置缓存键，使用host、uri和请求参数生成唯一的缓存键
+            proxy_cache_key $host$uri$is_args$args;
+        
+            # 忽略 Cache-Control 和 Set-Cookie 头部，强制缓存
+            proxy_ignore_headers Set-Cookie Cache-Control;
+        
+            # 针对不同响应码设置缓存时长
+            proxy_cache_valid 200 301 302 304 10m;
+            proxy_cache_valid 500 502 503 504 1m;
+        
+            # 显示缓存状态
+            add_header X-Cache-Status $upstream_cache_status;
+        }
+    }
+}
+
+# 四层负载均衡配置 (TCP)
+stream {
+    log_format main '$remote_addr $upstream_addr - [$time_local] $status $upstream_bytes_sent';
+    access_log /var/log/nginx/k8s-access.log main;
+
+    # k8s-apiserver负载均衡
+    upstream k8s-apiserver {
+        server k8s-master1:6443;
+        server k8s-master2:6443;
+        server k8s-master3:6443;
+    }
+
+    # Master apiserver负载均衡
+    server {
+        listen 16443;
+        proxy_pass k8s-apiserver;
+    }
+}

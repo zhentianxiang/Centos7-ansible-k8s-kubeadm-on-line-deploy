@@ -1,0 +1,16 @@
+---
+- name: 备份原有的repo源
+  ignore_errors: yes
+  shell: mkdir -p /etc/yum.repos.d/bak && mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/bak 2>/dev/null || true
+
+- name: 添加 YUM 仓库安装源
+  raw: "{{ item }}"
+  with_items:
+    - "curl -o /etc/yum.repos.d/CentOS-Base.repo {{ base_repo }}"
+    - "curl -o /etc/yum.repos.d/epel.repo {{ epel_repo }}"
+
+- name: yum makecache 更新缓存
+  raw: "{{ item }}"
+  with_items:
+    - "yum clean all"
+    - "yum makecache fast -y"
