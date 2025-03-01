@@ -4,17 +4,6 @@
 - name: set hostname
   raw: "hostnamectl set-hostname {{ inventory_hostname }}"
 
-- name: Check if hosts.bak exists
-  stat:
-    path: /etc/hosts.bak
-  register: backup_hosts
-
-- name: Backup /etc/hosts if not already backed up
-  copy:
-    src: /etc/hosts
-    dest: /etc/hosts.bak
-  when: not backup_hosts.stat.exists
-
 - name: Add hosts
   template:
     src: hosts.j2
