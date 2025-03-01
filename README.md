@@ -9,6 +9,7 @@
 10.0.0.13
 10.0.0.13
 [root@k8s-master1 ~]# for host in $(cat iplist.txt); do sshpass -p 'your_password' ssh-copy-id -o StrictHostKeyChecking=no 'your_username'@$host; done
+[root@k8s-master1 ~]# ansible -i hosts.ini all -m shell -a "whoami"
 ```
 
 ### 2. 升级内核
@@ -72,11 +73,6 @@ master
 node
 newnode
 ```
-
-```sh
-[root@k8s-master1 ~]# ansible -i hosts.ini all -m shell -a "whoami"
-```
-
 重点修改的如下：
 
 > k8s_extra_ips:  kubrenetes master 节点信息(预留)，目的为了后期方便扩容 master 节点
