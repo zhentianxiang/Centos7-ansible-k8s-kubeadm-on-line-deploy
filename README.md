@@ -4,10 +4,10 @@
 [root@k8s-master1 ~]# yum -y install ansible sshpass
 [root@k8s-master1 ~]# ssh-keygen -t rsa
 [root@k8s-master1 ~]# vim iplist.txt
-10.0.0.128
-10.0.0.129
-10.0.0.130
-10.0.0.131
+10.0.0.11
+10.0.0.12
+10.0.0.13
+10.0.0.13
 [root@k8s-master1 ~]# for host in $(cat iplist.txt); do sshpass -p 'your_password' ssh-copy-id -o StrictHostKeyChecking=no 'your_username'@$host; done
 ```
 
