@@ -7,12 +7,15 @@
       {% if not loop.last %},{% endif %}
     {% endfor %}
 
-    {% if extra_ips is defined and extra_ips|length > 0 %},{% endif %}
+    {% if vip is defined %}
+      , "{{ vip }}"
+    {% endif %}
 
-    {% for ip in extra_ips %}
-      "{{ ip }}"
-      {% if not loop.last %},{% endif %}
-    {% endfor %}
+    {% if extra_ips is defined and extra_ips|length > 0 %}
+      {% for ip in extra_ips %}
+        , "{{ ip }}"
+      {% endfor %}
+    {% endif %}
   ],
   "key": {
     "algo": "rsa",

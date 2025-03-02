@@ -153,6 +153,7 @@ calico_app: '/opt/k8s-install/app/calico'                                       
 
 
 ```sh
+[root@k8s-master1 ~]# vim hosts.ini
 [all]
 k8s-master1 ansible_connection=local  ip=10.0.0.11
 k8s-master2 ansible_host=10.0.0.12 ip=10.0.0.12 ansible_port=22 ansible_user=root
