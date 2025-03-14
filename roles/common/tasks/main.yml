@@ -4,11 +4,6 @@
 - name: set hostname
   raw: "hostnamectl set-hostname {{ inventory_hostname }}"
 
-- name: Add hosts
-  template:
-    src: hosts.j2
-    dest: /etc/hosts
-
 - name: 加载内核模块
   raw: "{{ item }}"
   with_items:
