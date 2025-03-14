@@ -6,12 +6,12 @@
     - init
   tags: init 
 
-- name: 2.K8S初始化
+- name: 2.K8S 主机名
   gather_facts: true
   hosts: k8s
   roles:
-    - common
-  tags: common 
+    - hostname
+  tags: hostname
 
 - name: 3.部署Docker
   gather_facts: true

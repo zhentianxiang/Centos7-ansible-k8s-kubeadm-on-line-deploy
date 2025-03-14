@@ -17,5 +17,11 @@
       - openssl-devel
       - iptables-services
       - iscsi-initiator-utils
-      #- glusterfs-fuse
+      - conntrack
+      - ipvsadm
+      - ipset
+      - jq
+      - curl
+      - sysstat
+      - libseccomp
     state: latest
