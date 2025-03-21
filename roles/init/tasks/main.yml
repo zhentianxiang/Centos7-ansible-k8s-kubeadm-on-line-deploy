@@ -8,3 +8,4 @@
 - include: 6_setting_ntpd.yml
 - include: 7_load_module.yml
 - include: 8_config_limits.yml
+- include: 9_build_kubeadm.yml

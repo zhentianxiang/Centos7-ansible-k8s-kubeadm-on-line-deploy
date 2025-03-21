@@ -32,17 +32,19 @@
     state: present
   when: is_primary_etcd_node
 
+
 - name: 删除默认的 kubeadm 二进制文件
   file:
     path: /usr/bin/kubeadm
     state: absent
   when: is_primary_etcd_node
 
-- name: 拷贝二次修改的 kubeadm-v1.23.0 的二进制文件
+- name: "使用100年证书的 kubeadm"
   copy:
-    src: kubeadm
-    dest: /usr/bin/kubeadm
+    src: "{{ tmp_dir }}/kubernetes/_output/local/go/bin/kubeadm"
+    dest: "/usr/bin/kubeadm"
     mode: '0755'
+    remote_src: yes  # 从目标节点复制文件
   when: is_primary_etcd_node
 
 - name: 启动kubelet
@@ -108,10 +110,6 @@
 
 - name: 修改 kubelet 存储目录
   template: src=kubelet.j2 dest=/etc/sysconfig/kubelet
-  when: is_primary_etcd_node
-
-- name: 修改 cgroup 为 systemd
-  template: src=10-kubeadm.conf.j2 dest=/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
   when: is_primary_etcd_node
 
 - name: 重启 kubelet

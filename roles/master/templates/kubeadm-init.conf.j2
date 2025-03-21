@@ -1,11 +1,23 @@
-# --- https://v1-17.docs.kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/control-plane-flags/
-# --- kubeadm config print init-defaults --component-configs KubeProxyConfiguration
-# --- kubeadm config view
-apiVersion: kubeadm.k8s.io/v1beta2
+apiVersion: kubeadm.k8s.io/v1beta3
 kind: InitConfiguration
 localAPIEndpoint:
   advertiseAddress: 0.0.0.0
   bindPort: 6443
+nodeRegistration:
+  criSocket: /var/run/dockershim.sock
+  name: "{{ ansible_hostname }}"  # 动态获取当前主机名
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+  imagePullPolicy: IfNotPresent
+  kubeletExtraArgs:
+    cgroup-driver: "systemd"  # 指定 kubelet 使用 systemd 作为 Cgroup 驱动
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+kubernetesVersion: {{ k8s_version }}
+controlPlaneEndpoint: "{{ api_vip_hosts }}:{{ lb_port }}"
+imageRepository: "{{ Other_URL }}"
 apiServer:
   certSANs:
   - {{ api_vip_hosts }}
@@ -20,12 +32,6 @@ apiServer:
   - {{ ip }}
 {% endfor %}
 {% endif %}
----
-apiVersion: kubeadm.k8s.io/v1beta2
-kind: ClusterConfiguration
-kubernetesVersion: {{ k8s_version }}
-controlPlaneEndpoint: "{{ api_vip_hosts }}:{{ lb_port }}"
-imageRepository: "{{ Other_URL }}"
 networking:
   dnsDomain: cluster.local
   podSubnet: {{ pod_cidr }}
@@ -53,22 +59,6 @@ etcd:
 #    caFile: {{ etcd_ssl }}/ca.pem
 #    certFile: {{ etcd_ssl }}/server.pem
 #    keyFile: {{ etcd_ssl }}/server-key.pem
-
-
-scheduler:
-  extraArgs:
-    bind-address: "0.0.0.0"
-    feature-gates: "ExpandCSIVolumes=true,CSIStorageCapacity=true,RotateKubeletServerCertificate=true,TTLAfterFinished=true"
-
-controllerManager:
-  extraArgs:
-    bind-address: "0.0.0.0"
-  extraArgs:
-    feature-gates: "ExpandCSIVolumes=true,CSIStorageCapacity=true,RotateKubeletServerCertificate=true,TTLAfterFinished=true"
-
-apiServer:
-  extraArgs:
-    feature-gates: "ExpandCSIVolumes=true,CSIStorageCapacity=true,RotateKubeletServerCertificate=true,TTLAfterFinished=true"
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration

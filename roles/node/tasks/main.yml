@@ -24,11 +24,12 @@
     path: /usr/bin/kubeadm
     state: absent
 
-- name: 拷贝二次修改的 kubeadm-v1.23.0 的二进制文件
+- name: "使用100年证书的 kubeadm"
   copy:
-    src: kubeadm
-    dest: /usr/bin/kubeadm
+    src: "{{ tmp_dir }}/kubernetes/_output/local/go/bin/kubeadm"
+    dest: "/usr/bin/kubeadm"
     mode: '0755'
+    remote_src: yes  # 从目标节点复制文件
 
 - name: 启动kubelet
   systemd:
@@ -63,11 +64,6 @@
   template:
     src: "kubelet.j2"
     dest: "/etc/sysconfig/kubelet"
-
-- name: 修改 cgroup 为 systemd
-  template:
-    src: "10-kubeadm.conf.j2"
-    dest: "/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf"
 
 - name: 创建 manifests 目录
   file: dest=/etc/kubernetes/manifests state=directory
