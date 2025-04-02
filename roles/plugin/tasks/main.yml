@@ -124,3 +124,21 @@
 - name: 格式化输出 k8s 证书到期时间
   debug:
     msg: "{{ certs.stdout_lines }}"
+
+- name: 查看集群状态
+  shell: kubectl get node -o wide
+  register: node_status
+  changed_when: false
+
+- name: 格式化输出集群状态
+  debug:
+    msg: "{{ node_status.stdout_lines }}"
+
+- name: 查看POD状态
+  shell: kubectl get pod -A -o wide
+  register: pod_status
+  changed_when: false
+
+- name: 格式化输出POD状态
+  debug:
+    msg: "{{ pod_status.stdout_lines }}"
