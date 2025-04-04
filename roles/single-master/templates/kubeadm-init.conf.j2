@@ -17,7 +17,7 @@ apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 kubernetesVersion: {{ k8s_version }}
 controlPlaneEndpoint: "{{ api_vip_hosts }}:{{ lb_port }}"
-imageRepository: "{{ Other_URL }}"
+imageRepository: "{{ k8s_image_url }}"
 apiServer:
   certSANs:
   - {{ api_vip_hosts }}
