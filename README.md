@@ -340,7 +340,7 @@ default_ingress_version: "v1.5.1"
 [root@k8s-master1 ~]# ansible-playbook -i hosts.ini multi-master-ha-deploy.yml   # 集群部署
 ```
 
-### 5. 验证集群
+### 4. 验证集群
 
 ```
 [root@localhost ~]# etcdctl --cacert=/etc/etcd/ssl/ca.pem --cert=/etc/etcd/ssl/server.pem --key=/etc/etcd/ssl/server-key.pem --endpoints="https://etcd1:2379,https://etcd2:2379,https://etcd3:2379" member list -w table
@@ -381,7 +381,7 @@ default_ingress_version: "v1.5.1"
 [root@k8s-master1 ~]# kubectl expose deployment nginx --port=80 --target-port=80 --type=NodePort
 ```
 
-### 6. 调整 kube 启动参数
+### 5. 调整 kube 启动参数
 
 ```sh
 # 请手动执行以下命令来修改 kube 自定义配置：
@@ -391,7 +391,7 @@ default_ingress_version: "v1.5.1"
 [root@k8s-master1 ~]# kubectl rollout restart daemonset -n kube-system kube-proxy
 ```
 
-### 7. 解决 node 节点报错
+### 6. 解决 node 节点报错
 
 ```sh
 Sep 14 00:59:22 k8s-node1 kubelet[1611]: E0914 00:59:22.040084    1611 file_linux.go:61] "Unable to read config path" err="path does not exist, ignoring" path="/etc/kubernetes/manifests"
@@ -399,7 +399,7 @@ Sep 14 00:59:22 k8s-node1 kubelet[1611]: E0914 00:59:22.040084    1611 file_linu
 [root@k8s-node1 ~]# ansible -i hosts.ini node -m shell -a "systemctl restart kubelet"
 ```
 
-### 8. 新机器加入集群后的操作
+### 7. 新机器加入集群后的操作
 
 ```sh
 # 新增机器的 IP 地址
@@ -458,7 +458,7 @@ k8s-openebs-storage-3
 [root@k8s-master1 ~]# ansible -i hosts.ini newnode -m copy -a "src=/etc/docker/certs.d/ dest=/etc/docker/certs.d/ mode=0755" --become
 ```
 
-### 9. 卸载删除集群
+### 8. 卸载删除集群
 
 ```sh
 [root@k8s-master1 ~]# ansible-playbook -i hosts.ini remove-k8s.yml
