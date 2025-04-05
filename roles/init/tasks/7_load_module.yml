@@ -82,6 +82,7 @@
     - { name: 'vm.panic_on_oom', value: '0' }
     - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
     - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
+    - { name: 'vm.nr_hugepages', value: '1024' }
 
 - name: 重新加载 sysctl 以应用新设置
   command: sysctl -p
