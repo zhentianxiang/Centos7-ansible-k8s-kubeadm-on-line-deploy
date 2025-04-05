@@ -13,9 +13,7 @@
     - "modprobe dm_snapshot"
     - "modprobe dm_mirror"
     - "modprobe dm_thin_pool"
-    - "modprobe nvme-tcp"
-    - "modprobe nvmet"
-    - "echo -e 'nvme-tcp\nnvmet' > /etc/modules-load.d/mayastor.conf"
+    - "echo -e 'dm_snapshot\ndm_mirror\ndm_thin_pool' > /etc/modules-load.d/glusterfs.conf"
 
 - name: seting swapoff
   raw: swapoff -a

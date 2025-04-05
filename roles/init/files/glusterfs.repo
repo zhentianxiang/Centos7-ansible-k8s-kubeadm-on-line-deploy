@@ -1,0 +1,5 @@
+[glusterfs]
+name=glusterfs
+baseurl=https://buildlogs.centos.org/centos/7/storage/x86_64/gluster-9/
+enabled=1
+gpgcheck=0

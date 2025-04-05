@@ -9,6 +9,12 @@
     - "curl -o /etc/yum.repos.d/CentOS-Base.repo {{ base_repo }}"
     - "curl -o /etc/yum.repos.d/epel.repo {{ epel_repo }}"
 
+- name: 添加 glusterfs 源
+  copy:
+    src: glusterfs.repo
+    dest: /etc/yum.repos.d/glusterfs.repo
+    mode: '0644'
+
 - name: yum makecache 更新缓存
   raw: "{{ item }}"
   with_items:
