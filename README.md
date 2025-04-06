@@ -370,6 +370,14 @@ default_ingress_version: "v1.5.1"
 | https://etcd3:2379 |   true | 17.795671ms |       |
 +--------------------+--------+-------------+-------+
 
+# 查看 ETCD 备份情况
+[root@localhost ~]# systemctl status etcd-backup.timer
+[root@localhost ~]# systemctl status etcd-backup.service
+[root@localhost ~]# ls -lh /var/lib/etcd-backup/
+[root@localhost ~]# ETCDCTL_API=3 etcdctl --cacert=/etc/etcd/ssl/ca.pem \
+  --cert=/etc/etcd/ssl/server.pem --key=/etc/etcd/ssl/server-key.pem \
+  --endpoints=https://etcd1:2379 snapshot status /var/lib/etcd-backup/etcd-snapshot-最新文件名.db
+
 [root@k8s-master1 ~]# kubectl get cs
 
 [root@k8s-master1 ~]# kubectl get node
