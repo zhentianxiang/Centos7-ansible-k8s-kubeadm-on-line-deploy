@@ -33,6 +33,8 @@ etcd_version: 'v3.5.1'                                                          
 etcd_conf: "/etc/etcd/"                                                               # ETCD 配置文件路径
 etcd_ssl: '/etc/etcd/ssl'                                                             # ETCD 证书存储路径
 etcd_data: '/var/lib/etcd'                                                            # ETCD 数据存储路径
+etcd_backup_dir: "/var/lib/etcd-backup"                                               # ETCD 备份路径
+etcd_backup_keep_days: 7                                                              # 7 天保留周期
 extra_ips:                                                                            # ETCD 节点信息(预留),并不是当前 hosts.ini 文件定义的,目的是为了后期扩容 etcd
   - "11.0.1.21"
   - "11.0.1.22"
