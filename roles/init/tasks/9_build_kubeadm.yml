@@ -34,8 +34,24 @@
     - 'export GO111MODULE=on'
   when: is_primary_master_node
 
+- name: 添加 Go 环境变量到 profile.d
+  copy:
+    dest: /etc/profile.d/go.sh
+    content: |
+      export PATH=$PATH:/usr/local/go/bin
+      export GOPROXY=https://goproxy.cn
+      export GO111MODULE=on
+    mode: '0755'
+  when: is_primary_master_node
+
 - name: 让 /etc/profile 立即生效
   shell: source /etc/profile
+  args:
+    executable: /bin/bash
+  when: is_primary_master_node
+
+- name: 让 /etc/profile.d/go.sh 立即生效
+  shell: /etc/profile.d/go.sh
   args:
     executable: /bin/bash
   when: is_primary_master_node
@@ -105,6 +121,7 @@
 
     - name: 编译 kubeadm（带重试）
       shell: |
+        export PATH=$PATH:/usr/local/go/bin
         export GOPROXY=https://goproxy.cn
         export GO111MODULE=on
         cd {{ tmp_dir }}/kubernetes

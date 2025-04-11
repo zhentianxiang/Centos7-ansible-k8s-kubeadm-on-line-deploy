@@ -64,16 +64,8 @@
   ignore_errors: yes
   shell: "/bin/bash {{ tmp_dir }}/master-join.sh >/dev/null 2>&1"
 
-- name: 创建 $HOME/.kube
-  shell: "mkdir -p $HOME/.kube"
-
 - name: 配置$HOME/.kube用户权限
-  copy:
-    src: "/etc/kubernetes/admin.conf"
-    dest: "$HOME/.kube/config"
-    owner: root
-    group: root
-    mode: '0600'
+  shell: "mkdir -p $HOME/.kube; sudo cp -pf /etc/kubernetes/admin.conf $HOME/.kube/config; sudo chown $(id -u):$(id -g) $HOME/.kube/config"
 
 - name: 设置kubectl自动补全
   lineinfile:

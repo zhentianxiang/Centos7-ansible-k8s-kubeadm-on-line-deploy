@@ -32,8 +32,8 @@ lb_port: '16443'                                                                
 etcd_version: 'v3.5.1'                                                                # ETCD 版本
 etcd_conf: "/etc/etcd/"                                                               # ETCD 配置文件路径
 etcd_ssl: '/etc/etcd/ssl'                                                             # ETCD 证书存储路径
-force_cert_gen: false                                                                 # 是否强制重新生成证书
-force_cert_sync: false                                                                # 是否强制重新分发证书
+force_cert_gen: true                                                                 # 是否强制重新生成证书,第一次启动集群需要,如果etcd已经启动了重新跑集群则不需要
+force_cert_sync: true                                                                # 是否强制重新分发证书,第一次启动集群需要,如果etcd已经启动了重新跑集群则不需
 etcd_data: '/var/lib/etcd'                                                            # ETCD 数据存储路径
 etcd_backup_dir: "/var/lib/etcd-backup"                                               # ETCD 备份路径
 etcd_backup_keep_days: 7                                                              # 7 天保留周期
