@@ -120,7 +120,7 @@ code_version: 'v1.23.0'
 kube_version: '1.23.0'
 k8s_version: 'v1.23.0'
 kubelet_data_dir: '/var/lib/kubelet'
-k8s_image_url: 'registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6'
+k8s_image_url: 'registry.cn-hangzhou.aliyuncs.com/google_containers'
 
 # k8s master 节点预留 ip
 k8s_extra_ips:
@@ -344,7 +344,7 @@ code_version: 'v1.23.0'
 kube_version: '1.23.0'
 k8s_version: 'v1.23.0'
 kubelet_data_dir: '/var/lib/kubelet'
-k8s_image_url: 'registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6'
+k8s_image_url: 'registry.cn-hangzhou.aliyuncs.com/google_containers'
 
 # k8s master 节点预留 ip
 k8s_extra_ips:
