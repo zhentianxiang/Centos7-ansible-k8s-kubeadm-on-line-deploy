@@ -9,16 +9,16 @@ docker_ce_repo: "https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.rep
 
 # kubernetes 安装信息
 ghproxy: 'https://ghfast.top/'
-code_version: 'v1.23.0'
 tmp_dir: '/opt/k8s-install/join'
-containerd_data: '/var/lib/containerd'
-runc_version: 'v1.1.9'
-containerd_version: '1.7.25'
+docker_ce: 'docker-ce-20.10.10'
+docker_ce_cli: 'docker-ce-cli-20.10.10'
+containerd: 'containerd'
+docker_data_dir: '/var/lib/docker'
 kube_version: '1.23.0'
 k8s_version: 'v1.23.0'
+code_version: 'v1.23.0'
 kubelet_data_dir: '/var/lib/kubelet'
 k8s_image_url: 'registry.cn-hangzhou.aliyuncs.com/google_containers'
-pause_image: 'registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9'
 
 # k8s master 节点预留 ip
 k8s_extra_ips:
