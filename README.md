@@ -1,61 +1,52 @@
-### 1. 基础环境配置
+## 一、基础环境配置
+
+### 1. 安装 ansbile 和 sshpass
 
 ```sh
-[root@k8s-master1 ~]# yum -y install ansible sshpass
-[root@k8s-master1 ~]# vim /etc/ansible/ansible.cfg
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ yum -y install ansible
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim /etc/ansible/ansible.cfg
  10 [defaults]
  11 ansible_shell_executable = /usr/bin/bash # 新增这个
-[root@k8s-master1 ~]# ssh-keygen -t rsa
-[root@k8s-master1 ~]# vim iplist.txt
-11.0.1.11
-11.0.1.12
-11.0.1.13
-11.0.1.14
-11.0.1.15
-11.0.1.16
-11.0.1.17
-11.0.1.18
-11.0.1.19
-[root@k8s-master1 ~]# for host in $(cat iplist.txt); do sshpass -p 'your_password' ssh-copy-id -o StrictHostKeyChecking=no 'your_username'@$host; done
-[root@k8s-master1 ~]# ansible -i hosts.ini all -m shell -a "whoami"
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ssh-keygen -t rsa
 ```
 
-### 2. 升级内核
+### 2. 配置免密登陆
 
-不是必须的，根据实际情况来判断自己是否要升级内核
+普通用户 sudo 配置请看项目根目录中的 README-sudo.md 文档
 
-```sh
-# 由于网络问题可以提前搞一下，如果你的机器可以科学上网则无需
-[root@k8s-master1 ~]# ansible -i hosts.ini k8s -m copy -a "src=./kernel-lt-5.4.160-1.el7.elrepo.x86_64.rpm dest=/tmp/kernel-lt-5.4.160-1.el7.elrepo.x86_64.rpm mode=0644" --become
-# 先把 hosts.init 文件配置好在执行
-[root@k8s-master1 ~]# ansible-playbook -i hosts.ini install_kernel.yml
+```shell
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim iplist.txt
+11.0.1.31
+11.0.1.32
+11.0.1.33
+11.0.1.34
+11.0.1.35
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ for host in $(cat iplist.txt); do sshpass -p 'your_password' ssh-copy-id -o StrictHostKeyChecking=no 'deploy'@$host; done
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible -i hosts.ini all -m shell -a "whoami"
 ```
 
-### 3. 准备修改关键配置文件
+## 二、单 master 部署如下修改
 
-- 单 master 部署如下修改
+### 1. 主机分组文件
 
 ```sh
-[root@k8s-master1 ~]# cp roles/init/templates/no-etcd-hosts.j2 roles/init/templates/hosts.j2
-[root@k8s-master1 ~]# vim hosts.ini 
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim hosts.ini 
 [all]
-k8s-master1 ansible_connection=local  ip=11.0.1.11
-#k8s-master2 ansible_host=11.0.1.12 ip=11.0.1.12 ansible_port=22 ansible_user=root
-#k8s-master3 ansible_host=11.0.1.13 ip=11.0.1.13 ansible_port=22 ansible_user=root
-#etcd1 ansible_host=11.0.1.14 ip=11.0.1.14 ansible_port=22 ansible_user=root
-#etcd2 ansible_host=11.0.1.15 ip=11.0.1.15 ansible_port=22 ansible_user=root
-#etcd3 ansible_host=11.0.1.16 ip=11.0.1.16 ansible_port=22 ansible_user=root
-k8s-node1 ansible_host=11.0.1.17 ip=11.0.1.17 ansible_port=22 ansible_user=root
-k8s-node2 ansible_host=11.0.1.18 ip=11.0.1.18 ansible_port=22 ansible_user=root
-k8s-node3 ansible_host=11.0.1.19 ip=11.0.1.19 ansible_port=22 ansible_user=root
+k8s-master1 ansible_connection=local  ip=11.0.1.31
+#k8s-master2 ansible_host=11.0.1.32 ip=11.0.1.32 ansible_port=22 ansible_user=deploy
+#k8s-master3 ansible_host=11.0.1.33 ip=11.0.1.33 ansible_port=22 ansible_user=deploy
+k8s-node1 ansible_host=11.0.1.34 ip=11.0.1.34 ansible_port=22 ansible_user=deploy
+k8s-node2 ansible_host=11.0.1.35 ip=11.0.1.35 ansible_port=22 ansible_user=deploy
+#etcd1 ansible_host=11.0.1.31 ip=11.0.1.31 ansible_port=22 ansible_user=deploy
+#etcd2 ansible_host=11.0.1.32 ip=11.0.1.32 ansible_port=22 ansible_user=deploy
+#etcd3 ansible_host=11.0.1.33 ip=11.0.1.33 ansible_port=22 ansible_user=deploy
 # 对应更改all.yml 定义的master ip变量
 [k8s]
 k8s-master1
 #k8s-master2
 #k8s-master3
 k8s-node1
-#k8s-node2
-#k8s-node3
+k8s-node2
 
 [master]
 k8s-master1
@@ -65,7 +56,6 @@ k8s-master1
 [node]
 k8s-node1
 k8s-node2
-k8s-node3
 
 [etcd]
 #etcd1
@@ -87,8 +77,10 @@ master
 node
 newnode
 ```
-重点修改的如下：
+### 2. 全局变量文件
 
+> k8s_image_url:  集群初始化拉取的镜像前缀
+>
 > k8s_extra_ips:  kubrenetes master 节点信息(预留)，目的为了后期方便扩容 master 节点
 >
 > nic:  keepalived 调用的本地网卡的设备
@@ -102,44 +94,53 @@ newnode
 > calico_network: calico 调用本地网卡的设备
 
 ```sh
-[root@k8s-master1 ~]# vim group_vars/all.yml
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim group_vars/all.yml
 # 允许普通用户执行 sudo
 ansible_become: true
 ansible_become_method: sudo
 
-# 安装源配置
-base_repo: "http://centos7-yum.linuxtian.com/CentOS-Base.repo"
-epel_repo: "http://centos7-yum.linuxtian.com/CentOS-Base.repo"
-docker_ce_repo: "https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo"
+# 相关安装包位置
+tmp_dir: '/opt/k8s-install/join'
+repo_data: '/opt/k8s-install/mirrors'
+package_dir: '/opt/k8s-install/package'
+image_dir: '/opt/k8s-install/image'
+
+# docker 安装信息
+docker_ce: 'docker-ce-20.10.9'
+docker_ce_cli: 'docker-ce-cli-20.10.9'
+docker_data_dir: '/var/lib/docker'
+
+# registry 私有仓库
+registry_address: '11.0.1.31'
+registry_port: 5000
+registry_data: '/var/lib/registry'
 
 # kubernetes 安装信息
 ghproxy: 'https://ghfast.top/'
 code_version: 'v1.23.0'
-tmp_dir: '/opt/k8s-install/join'
-containerd_data: '/var/lib/containerd'
-runc_version: 'v1.1.9'
-containerd_version: '1.7.25'
+#containerd_data: '/var/lib/containerd'
+#runc_version: 'v1.1.9'
+#containerd_version: '1.7.25'
 kube_version: '1.23.0'
 k8s_version: 'v1.23.0'
 kubelet_data_dir: '/var/lib/kubelet'
-k8s_image_url: 'registry.cn-hangzhou.aliyuncs.com/google_containers'
-pause_image: 'registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9'
+k8s_image_url: '11.0.1.31:5000/google_containers'
 
 # k8s master 节点预留 ip
 k8s_extra_ips:
-  - "11.0.1.36"
-  - "11.0.1.37"
-  - "11.0.1.38"
-  - "11.0.1.39"
-service_cidr: '10.96.0.0/16'                                                          # service ip 段
-cluster_dns: '10.96.0.1'                                                              # kube-dns 服务器地址
-pod_cidr: '192.18.0.0/16'                                                             # pod ip 段
-calico_network: '"interface=ens192"'                                                  # 服务器宿主机网卡信息可以用 "," 分割
+  - "11.0.1.131"
+  - "11.0.1.132"
+  - "11.0.1.133"
+  - "11.0.1.134"
+service_cidr: '10.96.0.0/16'
+cluster_dns: '10.96.0.1'
+pod_cidr: '192.18.0.0/16'
+calico_network: '"interface=ens192"'
 
 # keepalived 配置
 nic: 'ens192'
 Virtual_Router_ID: '51'
-vip: '11.0.1.11'
+vip: '11.0.1.31'
 api_vip_hosts: apiserver.cluster.local
 notification_emails:
   - acassen@firewall.loc
@@ -168,10 +169,10 @@ etcd_backup_dir: "/var/lib/etcd-backup"
 etcd_backup_keep_days: 7
 # etcd-server-csr host 信息预留
 extra_ips:
-  - "11.0.1.40"
-  - "11.0.1.41"
-  - "11.0.1.42"
-  - "11.0.1.43"
+  - "11.0.1.141"
+  - "11.0.1.142"
+  - "11.0.1.143"
+  - "11.0.1.144"
 
 # 性能调优参数
 etcd_heartbeat_interval: 200
@@ -232,29 +233,39 @@ default_ingress_version: "v1.5.1"
 custom_hosts:
   registry.example.com: 127.0.0.1
 ```
-```sh
-[root@k8s-master1 ~]# ansible-playbook -i hosts.ini single-master-deploy.yml  # 单节点部署
-```
-- 多 master 集群方式部署
+
+### 3. 执行部署
 
 ```sh
-[root@k8s-master1 ~]# cp roles/init/templates/yes-etcd-hosts.j2 roles/init/templates/hosts.j2
-[root@k8s-master1 ~]# sed -i 's/^#etcd/etcd/' hosts.ini
+# 不是必须的，根据实际情况来判断自己是否要升级内核
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible-playbook -i hosts.ini install_kernel.yml
 ```
 
+```shell
+# 使用单点 master 不包含 etcd 专用的 hosts 文件
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ \cp roles/init/templates/no-etcd-hosts.j2 roles/init/templates/hosts.j2
+```
 
 ```sh
-[root@k8s-master1 ~]# vim hosts.ini
+# 使用 single 文件部署
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible-playbook -i hosts.ini single-master-deploy.yml
+```
+
+## 三、多 master 集群方式部署
+
+### 1. 主机分组文件
+
+```sh
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim hosts.ini
 [all]
-k8s-master1 ansible_connection=local  ip=11.0.1.11
-k8s-master2 ansible_host=11.0.1.12 ip=11.0.1.12 ansible_port=22 ansible_user=root
-k8s-master3 ansible_host=11.0.1.13 ip=11.0.1.13 ansible_port=22 ansible_user=root
-etcd1 ansible_host=11.0.1.14 ip=11.0.1.14 ansible_port=22 ansible_user=root
-etcd2 ansible_host=11.0.1.15 ip=11.0.1.15 ansible_port=22 ansible_user=root
-etcd3 ansible_host=11.0.1.16 ip=11.0.1.16 ansible_port=22 ansible_user=root
-k8s-node1 ansible_host=11.0.1.17 ip=11.0.1.17 ansible_port=22 ansible_user=root
-k8s-node2 ansible_host=11.0.1.18 ip=11.0.1.18 ansible_port=22 ansible_user=root
-k8s-node3 ansible_host=11.0.1.19 ip=11.0.1.19 ansible_port=22 ansible_user=root
+k8s-master1 ansible_connection=local  ip=11.0.1.31
+k8s-master2 ansible_host=11.0.1.32 ip=11.0.1.32 ansible_port=22 ansible_user=deploy
+k8s-master3 ansible_host=11.0.1.33 ip=11.0.1.33 ansible_port=22 ansible_user=deploy
+k8s-node1 ansible_host=11.0.1.34 ip=11.0.1.34 ansible_port=22 ansible_user=deploy
+k8s-node2 ansible_host=11.0.1.35 ip=11.0.1.35 ansible_port=22 ansible_user=deploy
+etcd1 ansible_host=11.0.1.31 ip=11.0.1.31 ansible_port=22 ansible_user=deploy
+etcd2 ansible_host=11.0.1.32 ip=11.0.1.32 ansible_port=22 ansible_user=deploy
+etcd3 ansible_host=11.0.1.33 ip=11.0.1.33 ansible_port=22 ansible_user=deploy
 # 对应更改all.yml 定义的master ip变量
 [k8s]
 k8s-master1
@@ -262,7 +273,6 @@ k8s-master2
 k8s-master3
 k8s-node1
 k8s-node2
-k8s-node3
 
 [master]
 k8s-master1
@@ -272,7 +282,6 @@ k8s-master3
 [node]
 k8s-node1
 k8s-node2
-k8s-node3
 
 [etcd]
 etcd1
@@ -294,18 +303,11 @@ master
 node
 newnode
 ```
-```sh
-# 由于网络问题可以提前搞一下，如果你的机器可以科学上网则无需
-[root@k8s-master1 ~]# ansible -i hosts.ini etcd -m copy -a "src=./roles/etcd/files/cfssl_linux-amd64 dest=/usr/local/bin/cfssl mode=0755" --become
-[root@k8s-master1 ~]# ansible -i hosts.ini etcd -m copy -a "src=./roles/etcd/files/cfssljson_linux-amd64 dest=/usr/local/bin/cfssl-json mode=0755" --become
-[root@k8s-master1 ~]# ansible -i hosts.ini etcd -m copy -a "src=./roles/etcd/files/cfssl-certinfo_linux-amd64 dest=/usr/local/bin/cfssl-certinfo mode=0755" --become
-[root@k8s-master1 ~]# ansible -i hosts.ini etcd -m copy -a "src=./roles/etcd/files/etcd-v3.5.1-linux-amd64.tar.gz dest=/usr/local/src/etcd-v3.5.1-linux-amd64.tar.gz mode=0644" --become
-```
 
+### 2. 全局变量文件
 
-
-重点修改的如下：
-
+> k8s_image_url:  集群初始化拉取的镜像前缀
+>
 > k8s_extra_ips:  kubrenetes master 节点信息(预留)，目的为了后期方便扩容 master 节点
 >
 > nic:  keepalived 调用的本地网卡的设备
@@ -319,44 +321,53 @@ newnode
 > calico_network: calico 调用本地网卡的设备
 
 ```sh
-[root@k8s-master1 ~]# vim group_vars/all.yml
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim group_vars/all.yml
 # 允许普通用户执行 sudo
 ansible_become: true
 ansible_become_method: sudo
 
-# 安装源配置
-base_repo: "http://centos7-yum.linuxtian.com/CentOS-Base.repo"
-epel_repo: "http://centos7-yum.linuxtian.com/CentOS-Base.repo"
-docker_ce_repo: "https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo"
+# 相关安装包位置
+tmp_dir: '/opt/k8s-install/join'
+repo_data: '/opt/k8s-install/mirrors'
+package_dir: '/opt/k8s-install/package'
+image_dir: '/opt/k8s-install/image'
+
+# docker 安装信息(不需要,这里只是用来配合registry仓库进行推送镜像用)
+docker_ce: 'docker-ce-20.10.9'
+docker_ce_cli: 'docker-ce-cli-20.10.9'
+docker_data_dir: '/var/lib/docker'
+
+# registry 私有仓库
+registry_address: '11.0.1.31'
+registry_port: 5000
+registry_data: '/var/lib/registry'
 
 # kubernetes 安装信息
 ghproxy: 'https://ghfast.top/'
 code_version: 'v1.23.0'
-tmp_dir: '/opt/k8s-install/join'
-containerd_data: '/var/lib/containerd'
-runc_version: 'v1.1.9'
-containerd_version: '1.7.25'
+#containerd_data: '/var/lib/containerd'
+#runc_version: 'v1.1.9'
+#containerd_version: '1.7.25'
 kube_version: '1.23.0'
 k8s_version: 'v1.23.0'
 kubelet_data_dir: '/var/lib/kubelet'
-k8s_image_url: 'registry.cn-hangzhou.aliyuncs.com/google_containers'
-pause_image: 'registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9'
+k8s_image_url: '11.0.1.31:5000/google_containers'
 
 # k8s master 节点预留 ip
 k8s_extra_ips:
-  - "11.0.1.36"
-  - "11.0.1.37"
-  - "11.0.1.38"
-  - "11.0.1.39"
-service_cidr: '10.96.0.0/16'                                                          # service ip 段
-cluster_dns: '10.96.0.1'                                                              # kube-dns 服务器地址
-pod_cidr: '192.18.0.0/16'                                                             # pod ip 段
-calico_network: '"interface=ens192"'                                                  # 服务器宿主机网卡信息可以用 "," 分割
+  - "11.0.1.131"
+  - "11.0.1.132"
+  - "11.0.1.133"
+  - "11.0.1.134"
+service_cidr: '10.96.0.0/16'
+cluster_dns: '10.96.0.1'
+pod_cidr: '192.18.0.0/16'
+calico_network: '"interface=ens192"'
 
 # keepalived 配置
 nic: 'ens192'
 Virtual_Router_ID: '51'
-vip: '11.0.1.20'
+vip: '11.0.1.30'
 api_vip_hosts: apiserver.cluster.local
 notification_emails:
   - acassen@firewall.loc
@@ -385,10 +396,10 @@ etcd_backup_dir: "/var/lib/etcd-backup"
 etcd_backup_keep_days: 7
 # etcd-server-csr host 信息预留
 extra_ips:
-  - "11.0.1.40"
-  - "11.0.1.41"
-  - "11.0.1.42"
-  - "11.0.1.43"
+  - "11.0.1.141"
+  - "11.0.1.142"
+  - "11.0.1.143"
+  - "11.0.1.144"
 
 # 性能调优参数
 etcd_heartbeat_interval: 200
@@ -450,169 +461,382 @@ custom_hosts:
   registry.example.com: 127.0.0.1
 ```
 
+### 3. 执行部署
+
 ```sh
-[root@k8s-master1 ~]# ansible-playbook -i hosts.ini multi-master-ha-deploy.yml   # 集群部署
+# 不是必须的，根据实际情况来判断自己是否要升级内核
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible-playbook -i hosts.ini install_kernel.yml
 ```
 
-### 4. 验证集群
-
+```shell
+# 使用集群 master 包含 etcd 专用的 hosts 文件
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ \cp roles/init/templates/yes-etcd-hosts.j2 roles/init/templates/hosts.j2
 ```
-[root@localhost ~]# sudo etcdctl --cacert=/etc/etcd/ssl/etcd-ca.pem --cert=/etc/etcd/ssl/etcd-server.pem --key=/etc/etcd/ssl/etcd-server-key.pem --endpoints="https://etcd1:2379,https://etcd2:2379,https://etcd3:2379" member list -w table
+
+```sh
+# 使用 multi 文件部署
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible-playbook -i multi-master-ha-deploy.yml
+```
+
+## 三、验证集群
+
+### 1. 查看 etcd 集群状态
+
+```shell
+# 其实还是当前机器，因为我的 etcd 和 master 公用的同一台机器
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ssh etcd1 
+Last login: Mon Apr 14 13:20:03 2025
+[deploy@k8s-master1 ~]$ 
+```
+
+```shell
+# etcd 节点基本信息
+[deploy@k8s-master1 ~]$ sudo etcdctl --cacert=/etc/etcd/ssl/etcd-ca.pem --cert=/etc/etcd/ssl/etcd-server.pem --key=/etc/etcd/ssl/etcd-server-key.pem --endpoints="https://etcd1:2379,https://etcd2:2379,https://etcd3:2379" member list -w table
 +------------------+---------+-------+------------------------+------------------------+------------+
 |        ID        | STATUS  | NAME  |       PEER ADDRS       |      CLIENT ADDRS      | IS LEARNER |
 +------------------+---------+-------+------------------------+------------------------+------------+
-|   d1f1c4b9eec273 | started | etcd1 | https://11.0.1.14:2380 | https://11.0.1.14:2379 |      false |
-| 517f93955c7fe7d3 | started | etcd3 | https://11.0.1.16:2380 | https://11.0.1.16:2379 |      false |
-| 777a9bac189012d3 | started | etcd2 | https://11.0.1.15:2380 | https://11.0.1.15:2379 |      false |
+| 19057a4144bcd8c4 | started | etcd2 | https://11.0.1.32:2380 | https://11.0.1.32:2379 |      false |
+| 7467e635c43f67f4 | started | etcd1 | https://11.0.1.31:2380 | https://11.0.1.31:2379 |      false |
+| 8eb8e095642da063 | started | etcd3 | https://11.0.1.33:2380 | https://11.0.1.33:2379 |      false |
 +------------------+---------+-------+------------------------+------------------------+------------+
 
-[root@localhost ~]# sudo etcdctl --cacert=/etc/etcd/ssl/etcd-ca.pem --cert=/etc/etcd/ssl/etcd-server.pem --key=/etc/etcd/ssl/etcd-server-key.pem --endpoints="https://etcd1:2379,https://etcd2:2379,https://etcd3:2379" endpoint status -w table
-+--------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
-|      ENDPOINT      |        ID        | VERSION | DB SIZE | IS LEADER | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS |
-+--------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
-| https://etcd1:2379 |   d1f1c4b9eec273 |   3.5.9 |  6.2 MB |     false |      false |         5 |       7688 |               7688 |        |
-| https://etcd2:2379 | 777a9bac189012d3 |   3.5.9 |  6.2 MB |     false |      false |         5 |       7688 |               7688 |        |
-| https://etcd3:2379 | 517f93955c7fe7d3 |   3.5.9 |  6.2 MB |      true |      false |         5 |       7688 |               7688 |        |
-+--------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
-
-[root@localhost ~]# sudo etcdctl --cacert=/etc/etcd/ssl/etcd-ca.pem --cert=/etc/etcd/ssl/etcd-server.pem --key=/etc/etcd/ssl/etcd-server-key.pem --endpoints="https://etcd1:2379,https://etcd2:2379,https://etcd3:2379" endpoint health --write-out=table
+# etcd 集群各节点的健康状态
+[deploy@k8s-master1 ~]$ sudo etcdctl --cacert=/etc/etcd/ssl/etcd-ca.pem --cert=/etc/etcd/ssl/etcd-server.pem --key=/etc/etcd/ssl/etcd-server-key.pem --endpoints="https://etcd1:2379,https://etcd2:2379,https://etcd3:2379" endpoint health --write-out=table
 +--------------------+--------+-------------+-------+
 |      ENDPOINT      | HEALTH |    TOOK     | ERROR |
 +--------------------+--------+-------------+-------+
-| https://etcd2:2379 |   true | 14.959001ms |       |
-| https://etcd1:2379 |   true | 15.752313ms |       |
-| https://etcd3:2379 |   true | 17.795671ms |       |
+| https://etcd1:2379 |   true |  11.55301ms |       |
+| https://etcd3:2379 |   true | 10.722732ms |       |
+| https://etcd2:2379 |   true |  8.544486ms |       |
 +--------------------+--------+-------------+-------+
 
+# 查看 etcd 集群各节点的详细状态信息 的命令，比 endpoint health 提供更丰富的数据
+[deploy@k8s-master1 ~]$ sudo etcdctl --cacert=/etc/etcd/ssl/etcd-ca.pem --cert=/etc/etcd/ssl/etcd-server.pem --key=/etc/etcd/ssl/etcd-server-key.pem --endpoints="https://etcd1:2379,https://etcd2:2379,https://etcd3:2379" endpoint status -w table
++--------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+|      ENDPOINT      |        ID        | VERSION | DB SIZE | IS LEADER | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS |
++--------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+| https://etcd1:2379 | 7467e635c43f67f4 |   3.5.9 |  9.3 MB |     false |      false |         4 |     172130 |             172130 |        |
+| https://etcd2:2379 | 19057a4144bcd8c4 |   3.5.9 |  9.3 MB |      true |      false |         4 |     172130 |             172130 |        |
+| https://etcd3:2379 | 8eb8e095642da063 |   3.5.9 |  9.4 MB |     false |      false |         4 |     172130 |             172130 |        |
++--------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+
 # 查看 ETCD 备份情况
-[root@localhost ~]# systemctl status etcd-backup.timer
-[root@localhost ~]# systemctl status etcd-backup.service
-[root@localhost ~]# ls -lh /var/lib/etcd-backup/
-[root@localhost ~]# ETCDCTL_API=3 etcdctl --cacert=/etc/etcd/ssl/etcd-ca.pem \
+[deploy@k8s-master1 ~]$ sudo systemctl status etcd-backup.timer
+[deploy@k8s-master1 ~]$ sudo systemctl status etcd-backup.service
+
+[deploy@k8s-master1 ~]$ sudo ls -lh /var/lib/etcd-backup/
+[deploy@k8s-master1 ~]$ sudo ls -lh /var/lib/etcd-backup/ |tail -n 1
+-rw------- 1 etcd etcd 8.9M Apr 14 13:00 etcd-snapshot-20250414-130000.db
+
+[deploy@k8s-master1 ~]$ sudo ETCDCTL_API=3 etcdctl --cacert=/etc/etcd/ssl/etcd-ca.pem \
   --cert=/etc/etcd/ssl/etcd-server.pem --key=/etc/etcd/ssl/etcd-server-key.pem \
-  --endpoints=https://etcd1:2379 snapshot status /var/lib/etcd-backup/etcd-snapshot-最新文件名.db
+  --endpoints=https://etcd1:2379 snapshot status /var/lib/etcd-backup/etcd-snapshot-20250414-130000.db
 
-[root@k8s-master1 ~]# kubectl get cs
-
-[root@k8s-master1 ~]# kubectl get node
-
-[root@k8s-master1 ~]# kubectl get pods -A
-
-[root@k8s-master1 ~]# kubectl create deployment nginx --image=harbor.meta42.indc.vnet.com/library/nginx:latest --replicas=4
-
-[root@k8s-master1 ~]# kubectl expose deployment nginx --port=80 --target-port=80 --type=NodePort
+[deploy@k8s-master1 ~]$ logout
+Connection to etcd1 closed.
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ 
 ```
 
-### 5. 调整 kube 启动参数
+### 2. 检查 k8s 集群状态
+
+```shell
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sudo kubectl get cs
+Warning: v1 ComponentStatus is deprecated in v1.19+
+NAME                 STATUS    MESSAGE   ERROR
+scheduler            Healthy   ok        
+controller-manager   Healthy   ok        
+etcd-0               Healthy   ok
+
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sudo kubectl get node -o wide
+NAME          STATUS   ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE                KERNEL-VERSION                CONTAINER-RUNTIME
+k8s-master1   Ready    control-plane   14h   v1.23.0   11.0.1.31     <none>        CentOS Linux 7 (Core)   5.4.160-1.el7.elrepo.x86_64   containerd://1.7.25
+k8s-master2   Ready    control-plane   14h   v1.23.0   11.0.1.32     <none>        CentOS Linux 7 (Core)   5.4.160-1.el7.elrepo.x86_64   containerd://1.7.25
+k8s-master3   Ready    control-plane   14h   v1.23.0   11.0.1.33     <none>        CentOS Linux 7 (Core)   5.4.160-1.el7.elrepo.x86_64   containerd://1.7.25
+k8s-node1     Ready    <none>          14h   v1.23.0   11.0.1.34     <none>        CentOS Linux 7 (Core)   5.4.160-1.el7.elrepo.x86_64   containerd://1.7.25
+k8s-node2     Ready    <none>          14h   v1.23.0   11.0.1.35     <none>        CentOS Linux 7 (Core)   5.4.160-1.el7.elrepo.x86_64   containerd://1.7.25
+
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sudo kubectl label node {k8s-node1,k8s-node2} ingress/type=nginx
+node/k8s-node1 labeled
+node/k8s-node2 labeled
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sudo kubectl get pods -A
+NAMESPACE       NAME                                            READY   STATUS      RESTARTS      AGE
+ingress-nginx   ingress-nginx-admission-create-dd8z8            0/1     Completed   1             14h
+ingress-nginx   ingress-nginx-admission-patch-mml7t             0/1     Completed   2             14h
+ingress-nginx   ingress-nginx-controller-2qjpn                  1/1     Running     0             6m14s
+ingress-nginx   ingress-nginx-controller-lwz4w                  1/1     Running     0             5m52s
+kube-system     calico-kube-controllers-5678d86b78-zfvz8        1/1     Running     0             6m7s
+kube-system     calico-node-22fkm                               1/1     Running     0             14h
+kube-system     calico-node-8kb75                               1/1     Running     0             14h
+kube-system     calico-node-g85rv                               1/1     Running     0             6m22s
+kube-system     calico-node-mr5ls                               1/1     Running     0             6m22s
+kube-system     calico-node-tgmgq                               1/1     Running     0             14h
+kube-system     coredns-f8dcdd6b5-b4vgf                         1/1     Running     0             14h
+kube-system     coredns-f8dcdd6b5-wbl8s                         1/1     Running     0             14h
+kube-system     kube-apiserver-k8s-master1                      1/1     Running     4             14h
+kube-system     kube-apiserver-k8s-master2                      1/1     Running     4             14h
+kube-system     kube-apiserver-k8s-master3                      1/1     Running     2             14h
+kube-system     kube-controller-manager-k8s-master1             1/1     Running     5             14h
+kube-system     kube-controller-manager-k8s-master2             1/1     Running     4             14h
+kube-system     kube-controller-manager-k8s-master3             1/1     Running     2             14h
+kube-system     kube-proxy-4qf79                                1/1     Running     0             14h
+kube-system     kube-proxy-btp8t                                1/1     Running     0             14h
+kube-system     kube-proxy-w6zzp                                1/1     Running     0             14h
+kube-system     kube-proxy-zclj7                                1/1     Running     0             14h
+kube-system     kube-proxy-zv7z8                                1/1     Running     0             14h
+kube-system     kube-scheduler-k8s-master1                      1/1     Running     5             14h
+kube-system     kube-scheduler-k8s-master2                      1/1     Running     4             14h
+kube-system     kube-scheduler-k8s-master3                      1/1     Running     2             14h
+openebs         openebs-localpv-provisioner-6787b599b9-c7cxd    1/1     Running     0             14h
+openebs         openebs-ndm-cluster-exporter-7bfd5746f4-jkcnw   1/1     Running     0             14h
+openebs         openebs-ndm-j7p9n                               1/1     Running     0             14h
+openebs         openebs-ndm-mclk2                               1/1     Running     0             14h
+openebs         openebs-ndm-node-exporter-845g7                 1/1     Running     0             14h
+openebs         openebs-ndm-node-exporter-jf9n5                 1/1     Running     1 (14h ago)   14h
+openebs         openebs-ndm-operator-845b8858db-57qkj           1/1     Running     0             14h
+```
+
+```shell
+# 如果pod一直 pending 或者 node 无法 ready，则重启 containerd 属于 BUG
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible -i hosts.ini k8s -m shell -a "systemctl restart containerd"
+```
+
+```shell
+# 创建服务
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sudo kubectl create deployment nginx --image=harbor.meta42.indc.vnet.com/library/nginx:latest --replicas=4
+
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sudo kubectl expose deployment nginx --port=80 --target-port=80 --type=NodePort
+```
+
+## 四、配置 ingress 7 层代理
+
+### 1. ha 节点 (master 节点) 修改配置
+
+```shell
+# 3 台 master 机器相同配置
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sudo vim /etc/nginx/nginx.conf
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+# HTTP负载均衡配置
+http {
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                     'Status: $status BodyBytesSent: $body_bytes_sent '
+                     'Referer: "$http_referer" '
+                     'UserAgent: "$http_user_agent" '
+                     'XForwardedFor: "$http_x_forwarded_for" '
+                     'Upgrade: $http_upgrade Connection: $http_connection '
+                     'Host: $http_host '
+                     'CacheStatus: $upstream_cache_status '
+                     'RequestTime: $request_time';
+
+    access_log /var/log/nginx/access.log main;
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    include /etc/nginx/mime.types;
+    include /etc/nginx/conf.d/*.conf;
+    default_type application/octet-stream;
+
+    client_max_body_size 102400m;
+
+    # HTTP Ingress-Nginx负载均衡
+    upstream ingress-nginx-http {
+        server 11.0.1.33:80;  # 选择 ingress 所在的节点
+        server 11.0.1.34:80;  # 选择 ingress 所在的节点
+    }
+
+    # HTTPS Ingress-Nginx负载均衡
+    upstream ingress-nginx-https {
+        server 11.0.1.33:443;  # 选择 ingress 所在的节点
+        server 11.0.1.34:443;  # 选择 ingress 所在的节点
+    }
+
+    # HTTP负载均衡
+    server {
+        listen 80;
+
+        location / {
+            proxy_pass http://ingress-nginx-http;  # 指定 HTTP 上游
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    # HTTPS负载均衡
+    server {
+        listen 443 ssl;
+        ssl_certificate /etc/nginx/cret/nginx/*.linuxtian.com.crt;
+        ssl_certificate_key /etc/nginx/cret/nginx/*.linuxtian.com.key;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384';
+        ssl_prefer_server_ciphers on;
+
+
+        location / {
+            proxy_pass https://ingress-nginx-https;  # 指定 HTTPS 上游
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
+```
+## 五、其他相关配置
+
+### 1. 调整 kube 启动参数 (可选修改)
 
 ```sh
 # 请手动执行以下命令来修改 kube 自定义配置：
-[root@k8s-master1 ~]# sed -i "/image:/i\    - --feature-gates=RemoveSelfLink=false" /etc/kubernetes/manifests/kube-apiserver.yaml # 每台 master 都执行
-[root@k8s-master1 ~]# sed -i "s/bind-address=127.0.0.1/bind-address=0.0.0.0/g" /etc/kubernetes/manifests/kube-controller-manager.yaml # 每台 master 都执行
-[root@k8s-master1 ~]# kubectl get cm -n kube-system kube-proxy -o yaml | sed "s/metricsBindAddress: \"\"/metricsBindAddress: \"0.0.0.0\"/g" | kubectl replace -f -
-[root@k8s-master1 ~]# kubectl rollout restart daemonset -n kube-system kube-proxy
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sed -i "/image:/i\    - --feature-gates=RemoveSelfLink=false" /etc/kubernetes/manifests/kube-apiserver.yaml # 每台 master 都执行
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ sed -i "s/bind-address=127.0.0.1/bind-address=0.0.0.0/g" /etc/kubernetes/manifests/kube-controller-manager.yaml # 每台 master 都执行
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ kubectl get cm -n kube-system kube-proxy -o yaml | sed "s/metricsBindAddress: \"\"/metricsBindAddress: \"0.0.0.0\"/g" | kubectl replace -f -
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ kubectl rollout restart daemonset -n kube-system kube-proxy
 ```
 
-### 6. 解决 node 节点报错
+### 2. 解决 node 节点报错
+
+`Sep 14 00:59:22 k8s-node1 kubelet[1611]: E0914 00:59:22.040084    1611 file_linux.go:61] "Unable to read config path" err="path does not exist, ignoring" path="/etc/kubernetes/manifests"`
 
 ```sh
-Sep 14 00:59:22 k8s-node1 kubelet[1611]: E0914 00:59:22.040084    1611 file_linux.go:61] "Unable to read config path" err="path does not exist, ignoring" path="/etc/kubernetes/manifests"
-[root@k8s-node1 ~]# ansible -i hosts.ini node -m shell -a "mkdir -pv /etc/kubernetes/manifests"
-[root@k8s-node1 ~]# ansible -i hosts.ini node -m shell -a "systemctl restart kubelet"
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible -i hosts.ini node -m shell -a "mkdir -pv /etc/kubernetes/manifests"
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible -i hosts.ini node -m shell -a "systemctl restart kubelet"
 ```
 
-### 7. 新机器加入集群后的操作
+## 六、k8s 节点平滑扩容
 
-```sh
+### 1. ip 列表新增机器
+
+```shell
 # 新增机器的 IP 地址
 [root@k8s-master1 Centos7-ansible-k8s-kubeadm-on-line-deploy-main]# cat iplist.txt 
-11.0.1.11
-11.0.1.12
-11.0.1.13
-11.0.1.14
-11.0.1.15
-11.0.1.16
-11.0.1.17
-11.0.1.18
-11.0.1.19
-11.0.1.21 # 新增
-11.0.1.22 # 新增
-11.0.1.23 # 新增
-```
-```sh
-[root@k8s-master1 ~]# for host in $(cat iplist.txt); do sshpass -p 'your_password' ssh-copy-id -o StrictHostKeyChecking=no 'your_username'@$host; done
+11.0.1.31
+11.0.1.32
+11.0.1.33
+11.0.1.34
+11.0.1.35
+11.0.1.36 # 新增
+11.0.1.37 # 新增
+11.0.1.38 # 新增
 ```
 
+### 2. 配置免密登陆
+
+```shell
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ for host in $(cat iplist.txt); do sshpass -p 'your_password' ssh-copy-id -o StrictHostKeyChecking=no 'deploy'@$host; done
 ```
-[root@k8s-master1 ~]# vim hosts.ini
-[all]  # 这个分组下面新增3个
-k8s-openebs-storage-1 ansible_host=11.0.1.21 ip=11.0.1.21 ansible_port=22 ansible_user=root
-k8s-openebs-storage-2 ansible_host=11.0.1.22 ip=11.0.1.22 ansible_port=22 ansible_user=root
-k8s-openebs-storage-3 ansible_host=11.0.1.23 ip=11.0.1.23 ansible_port=22 ansible_user=root
-#24小时token过期后添加node节点
+
+### 3. 主机分组新增机器
+
+```shell
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim hosts.ini
+# 全部分组下面新增3个
+[all] 
+k8s-node-3 ansible_host=11.0.1.36 ip=11.0.1.36 ansible_port=22 ansible_user=deploy
+k8s-node-4 ansible_host=11.0.1.37 ip=11.0.1.37 ansible_port=22 ansible_user=deploy
+k8s-node-5 ansible_host=11.0.1.38 ip=11.0.1.38 ansible_port=22 ansible_user=deploy
+
+# k8s 分组下面新增3个
+[k8s]
+k8s-node3
+k8s-node4
+k8s-node5
+
+# newnode 分组里面也新增3个
 [newnode]
-k8s-openebs-storage-1
-k8s-openebs-storage-2
-k8s-openebs-storage-3
+k8s-node-3
+k8s-node-4
+k8s-node-5
 ```
+
+### 4. 测试是否能用
 
 ```sh
-[root@k8s-master1 ~]# ansible -i hosts.ini newnode -m shell -a "whoami"
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible -i hosts.ini newnode -m shell -a "whoami"
 ```
+
+### 5. 升级内核 (可选操作)
 
 ```sh
-# 升级内核 --limit 指定 newnode 分组,因为只有新加入的机器需要拷贝一次
-[root@k8s-master1 ~]# ansible -i hosts.ini newnode -m copy -a "src=./kernel-lt-5.4.160-1.el7.elrepo.x86_64.rpm dest=/tmp/kernel-lt-5.4.160-1.el7.elrepo.x86_64.rpm mode=0644" --become
+# --limit 指定 newnode 分组,默认文件里面应该是 k8s 分组，所以我们只希望升级新添加机器的内核
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible-playbook -i hosts.ini --limit newnode install_kernel.yml
 ```
+
+### 6. 执行操作
 
 ```sh
-# --limit 指定 newnode 分组,默认文件里面应该是 k8s 分组
-[root@k8s-master1 ~]# ansible-playbook -i hosts.ini --limit newnode install_kernel.yml
+# 指向 add 文件
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible-playbook -i hosts.ini add-node.yml
 ```
+
+### 7. 解决 node 节点报错
+
+`Sep 14 00:59:22 k8s-node1 kubelet[1611]: E0914 00:59:22.040084    1611 file_linux.go:61] "Unable to read config path" err="path does not exist, ignoring" path="/etc/kubernetes/manifests"`
 
 ```sh
-# 添加节点
-[root@k8s-master1 ~]# ansible-playbook -i hosts.ini add-node.yml
+# 选择 newnode 分组,因为这个里面是新增的机器
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible -i hosts.ini newnode -m shell -a "mkdir -pv /etc/kubernetes/manifests"
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible -i hosts.ini newnode -m shell -a "systemctl restart kubelet"
 ```
 
-```sh
-# 修改 hosts 添加
-[root@k8s-master1 ~]# vim /etc/hosts
-127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
-::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
-# k8s 高可用 VIP
-11.0.1.20   apiserver.cluster.local
+## 七、其他操作
 
-# 输出 k8s 组主机
-11.0.1.11 k8s-master1
-11.0.1.12 k8s-master2
-11.0.1.13 k8s-master3
-11.0.1.17 k8s-node1
-11.0.1.18 k8s-node2
-11.0.1.19 k8s-node3
-11.0.1.21 k8s-storage-1
-11.0.1.22 k8s-storage-2
-11.0.1.23 k8s-storage-3
-
-# 输出 etcd 组主机
-11.0.1.14 etcd1
-11.0.1.15 etcd2
-11.0.1.16 etcd3
-
-# 输出自定义的 hosts 解析
-127.0.0.1   registry.example.com
-
-# 统一 hosts
-[root@k8s-master1 ~]# ansible -i hosts.ini all -m copy -a "src=/etc/hosts dest=/etc/hosts mode=0644" --become
-```
+### 1. 配置 harbor 证书
 
 ```sh
 # 拷贝 harbor 证书文件，当然 ansbile 中是没有的，需要后期自己部署 harbor，只是为了使用 ansible 统一集群配置
-[root@k8s-master1 ~]# ansible -i hosts.ini newnode -m copy -a "src=/etc/docker/certs.d/ dest=/etc/docker/certs.d/ mode=0755" --become
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible -i hosts.ini k8s -m copy -a "src=/etc/containerd/certs.d/ dest=/etc/containerd/certs.d/ mode=0755" --become
 ```
 
-### 8. 卸载删除集群
+### 2. 安装低版本 k8s 使用 docker 不使用 containerd
+
+```shell
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim multi-master-ha-deploy.yml
+- name: 3.部署Docker  # 把原本的修改为 docker
+  gather_facts: true
+  hosts: k8s
+  roles:
+    - docker
+  tags: docker
+```
+
+```shell
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ vim group_vars/all.yml
+code_version: 'v1.23.0'   # 修改为 1.23.0
+kube_version: '1.23.0'    # 修改为 1.23.0
+k8s_version: 'v1.23.0'    # 修改为 1.23.0
+```
+
+```shell
+# 使用对应的版本的 kubeadm
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ \cp roles/master/files/kubeadm-1.23.0  roles/master/files/kubeadm
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ \cp roles/joinmaster/files/kubeadm-1.23.0  roles/master/files/kubeadm
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ \cp roles/single-master/files/kubeadm-1.23.0  roles/master/files/kubeadm
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ \cp roles/node/files/kubeadm-1.23.0  roles/master/files/kubeadm
+```
+
+```shell
+
+# 执行部署
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible-playbook -i hosts.ini multi-master-ha-deploy.yml
+```
+
+## 八、卸载删除集群
 
 ```sh
-[root@k8s-master1 ~]# ansible-playbook -i hosts.ini remove-k8s.yml
+[deploy@k8s-master1 Centos7-ansible-k8s-containerd-20250413]$ ansible-playbook -i hosts.ini remove-k8s.yml
 ```

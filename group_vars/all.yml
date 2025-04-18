@@ -2,39 +2,48 @@
 ansible_become: true
 ansible_become_method: sudo
 
-# 安装源配置
-base_repo: "http://centos7-yum.linuxtian.com/CentOS-Base.repo"
-epel_repo: "http://centos7-yum.linuxtian.com/CentOS-Base.repo"
-docker_ce_repo: "https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo"
+# 相关安装包位置
+tmp_dir: '/opt/k8s-install/join'
+repo_data: '/opt/k8s-install/mirrors'
+package_dir: '/opt/k8s-install/package'
+image_dir: '/opt/k8s-install/image'
+
+# docker 安装信息(不需要,这里只是用来配合registry仓库进行推送镜像用)
+docker_ce: 'docker-ce-20.10.9'
+docker_ce_cli: 'docker-ce-cli-20.10.9'
+docker_data_dir: '/var/lib/docker'
+
+# registry 私有仓库
+registry_address: '11.0.1.31'
+registry_port: 5000
+registry_data: '/var/lib/registry'
 
 # kubernetes 安装信息
 ghproxy: 'https://ghfast.top/'
-tmp_dir: '/opt/k8s-install/join'
-docker_ce: 'docker-ce-20.10.10'
-docker_ce_cli: 'docker-ce-cli-20.10.10'
-containerd: 'containerd'
-docker_data_dir: '/var/lib/docker'
+code_version: 'v1.23.0'
+#containerd_data: '/var/lib/containerd'
+#runc_version: 'v1.1.9'
+#containerd_version: '1.7.25'
 kube_version: '1.23.0'
 k8s_version: 'v1.23.0'
-code_version: 'v1.23.0'
 kubelet_data_dir: '/var/lib/kubelet'
-k8s_image_url: 'registry.cn-hangzhou.aliyuncs.com/google_containers'
+k8s_image_url: '11.0.1.31:5000/google_containers'
 
 # k8s master 节点预留 ip
 k8s_extra_ips:
-  - "11.0.1.36"
-  - "11.0.1.37"
-  - "11.0.1.38"
-  - "11.0.1.39"
-service_cidr: '10.96.0.0/16'                                                          # service ip 段
-cluster_dns: '10.96.0.1'                                                              # kube-dns 服务器地址
-pod_cidr: '192.18.0.0/16'                                                             # pod ip 段
-calico_network: '"interface=ens192"'                                                  # 服务器宿主机网卡信息可以用 "," 分割
+  - "11.0.1.131"
+  - "11.0.1.132"
+  - "11.0.1.133"
+  - "11.0.1.134"
+service_cidr: '10.96.0.0/16'
+cluster_dns: '10.96.0.1'
+pod_cidr: '192.18.0.0/16'
+calico_network: '"interface=ens192"'
 
 # keepalived 配置
 nic: 'ens192'
 Virtual_Router_ID: '51'
-vip: '11.0.1.20'
+vip: '11.0.1.30'
 api_vip_hosts: apiserver.cluster.local
 notification_emails:
   - acassen@firewall.loc
@@ -63,10 +72,10 @@ etcd_backup_dir: "/var/lib/etcd-backup"
 etcd_backup_keep_days: 7
 # etcd-server-csr host 信息预留
 extra_ips:
-  - "11.0.1.40"
-  - "11.0.1.41"
-  - "11.0.1.42"
-  - "11.0.1.43"
+  - "11.0.1.141"
+  - "11.0.1.142"
+  - "11.0.1.143"
+  - "11.0.1.144"
 
 # 性能调优参数
 etcd_heartbeat_interval: 200
