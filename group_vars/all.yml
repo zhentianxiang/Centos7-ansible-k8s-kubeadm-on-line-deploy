@@ -2,21 +2,17 @@
 ansible_become: true
 ansible_become_method: sudo
 
-# 相关安装包位置
 tmp_dir: '/opt/k8s-install/join'
-repo_data: '/opt/k8s-install/mirrors'
-package_dir: '/opt/k8s-install/package'
-image_dir: '/opt/k8s-install/image'
 
-# docker 安装信息(不需要,这里只是用来配合registry仓库进行推送镜像用)
+# 安装源配置
+base_repo: "http://centos7-yum.linuxtian.com/CentOS-Base.repo"
+epel_repo: "http://centos7-yum.linuxtian.com/CentOS-Base.repo"
+docker_ce_repo: "https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo"
+
+# docker 安装信息
 docker_ce: 'docker-ce-20.10.9'
 docker_ce_cli: 'docker-ce-cli-20.10.9'
 docker_data_dir: '/var/lib/docker'
-
-# registry 私有仓库
-registry_address: '11.0.1.31'
-registry_port: 5000
-registry_data: '/var/lib/registry'
 
 # kubernetes 安装信息
 ghproxy: 'https://ghfast.top/'
