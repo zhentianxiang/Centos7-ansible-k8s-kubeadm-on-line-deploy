@@ -12,6 +12,7 @@ docker_ce_repo: "https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.rep
 # docker 安装信息
 docker_ce: 'docker-ce-20.10.9'
 docker_ce_cli: 'docker-ce-cli-20.10.9'
+containerd: 'containerd'
 docker_data_dir: '/var/lib/docker'
 
 # kubernetes 安装信息
