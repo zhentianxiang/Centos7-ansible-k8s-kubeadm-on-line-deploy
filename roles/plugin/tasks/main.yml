@@ -111,17 +111,17 @@
       shell: |
         export PATH=$PATH:/usr/local/bin
         awk '
-          /kind: Deployment/ { in_deployment=1; print $0; next }
-          in_deployment && /containers:/ { 
+          /kind: DaemonSet/ { in_daemonsets=1; print $0; next }
+          in_daemonsets && /containers:/ { 
             print "      hostNetwork: true"; 
             print $0; 
             next 
           }
-          in_deployment && /kubernetes.io\/os: linux/ { 
+          in_daemonsets && /kubernetes.io\/os: linux/ { 
             print "        {{ ingres_label }}"; 
             next 
           }
-          in_deployment && /kind:/ && $0 !~ /Deployment/ { in_deployment=0 }
+          in_daemonsets && /kind:/ && $0 !~ /DaemonSet/ { in_daemonsets=0 }
           { print $0 }
         ' "{{ ingress_app }}/ingress-nginx-{{ ingress_version }}.yaml" > temp.yaml && mv temp.yaml "{{ ingress_app }}/ingress-nginx-{{ ingress_version }}.yaml"
       when: 
