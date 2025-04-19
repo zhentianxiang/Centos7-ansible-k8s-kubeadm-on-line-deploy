@@ -45,7 +45,7 @@
       
     - name: 下载 Calico YAML 文件（带重试）
       get_url:
-        url: "{{ ghproxy }}/https://raw.githubusercontent.com/projectcalico/calico/{{ calico_version }}/manifests/calico.yaml"
+        url: "{{ ghproxy }}/https://raw.githubusercontent.com/zhentianxiang/Centos7-ansible-k8s-kubeadm-on-line-deploy/refs/heads/main/app/calico/calico-{{ calico_version }}.yaml"
         dest: "{{ calico_app }}/calico-{{ calico_version }}.yaml"
         timeout: 30
         validate_certs: no
@@ -92,7 +92,7 @@
       
     - name: 下载 ingress-nginx YAML 文件（带重试）
       get_url:
-        url: "{{ ghproxy }}/https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-{{ ingress_version }}/deploy/static/provider/cloud/deploy.yaml"
+        url: "{{ ghproxy }}/https://raw.githubusercontent.com/zhentianxiang/Centos7-ansible-k8s-kubeadm-on-line-deploy/refs/heads/main/app/ingress/ingress-nginx-{{ ingress_version }}.yaml"
         dest: "{{ ingress_app }}/ingress-nginx-{{ ingress_version }}.yaml"
         timeout: 30
         validate_certs: no
