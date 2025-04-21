@@ -15,25 +15,21 @@
   until: download_result is succeeded
   when: not kernel_rpm_status.stat.exists
 
-#- name: 下载 5.4 版本的内核 rpm 包
-#  copy:
-#    src: kernel-lt-5.4.160-1.el7.elrepo.x86_64.rpm
-#    dest: /tmp/kernel-lt-5.4.160-1.el7.elrepo.x86_64.rpm
-#    mode: '0644'
-#  when: not kernel_rpm_status.stat.exists
-
 - name: 安装 rpm 包
   yum:
     name: /tmp/kernel-lt-5.4.160-1.el7.elrepo.x86_64.rpm
     state: present
+
+- name: 设置新内核为默认启动项
+  command: grub2-set-default 'CentOS Linux (5.4.160-1.el7.elrepo.x86_64) 7 (Core)'
 
 - name: 生成 grub 配置
   command: grub2-mkconfig -o /boot/grub2/grub.cfg
   args:
     creates: /boot/grub2/grub.cfg
 
-- name: 设置新内核默认值为 0
-  command: grub2-set-default 0
+#- name: 设置新内核默认值为 0
+#  command: grub2-set-default 0
 
 - name: 1分钟后重启k8s服务器
   shell: "shutdown -r 1"
