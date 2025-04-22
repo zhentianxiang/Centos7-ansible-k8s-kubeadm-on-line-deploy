@@ -1,7 +1,33 @@
----
-- name: install package
-  package:
-    name:
+- name: Install essential packages with retries and speed optimizations
+  block:
+    - name: Clean up possible yum transactions
+      command: yum-complete-transaction --cleanup-only
+      ignore_errors: true
+
+    - name: Break yum lock if exists
+      stat:
+        path: /var/run/yum.pid
+      register: yum_lock
+
+    - name: Remove yum lock file if it exists
+      file:
+        path: /var/run/yum.pid
+        state: absent
+      when: yum_lock.stat.exists
+
+    - name: Install base packages in batch
+      package:
+        name: "{{ common_packages }}"
+        state: present
+      async: 300
+      poll: 5
+      register: yum_result
+      until: yum_result is succeeded
+      retries: 3
+      ignore_errors: yes
+
+  vars:
+    common_packages:
       - ntp
       - ntpdate
       - rsync
@@ -31,4 +57,3 @@
       - glusterfs-rdma
       - glusterfs-geo-replication
       - glusterfs-devel
-    state: latest
