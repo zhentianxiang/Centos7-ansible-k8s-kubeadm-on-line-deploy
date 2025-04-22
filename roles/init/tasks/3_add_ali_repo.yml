@@ -1,4 +1,13 @@
 ---
+- name: 如果是 Red Hat 系统，禁用 Subscription Manager 仓库管理
+  shell: |
+    if [ -f /etc/redhat-release ] && grep -q "Red Hat" /etc/redhat-release; then
+      subscription-manager config --rhsm.manage_repos=0
+    fi
+  args:
+    executable: /bin/bash
+  when: ansible_facts['os_family'] == 'RedHat'  # 可选，进一步确保是 RedHat 家族
+
 - name: 备份原有的repo源
   ignore_errors: yes
   shell: mkdir -p /etc/yum.repos.d/bak && mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/bak 2>/dev/null || true
