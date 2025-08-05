@@ -17,7 +17,9 @@
 
 - name: 下载并安装 Go 环境
   shell: |
-    wget https://go.dev/dl/go1.20.4.linux-amd64.tar.gz -O /tmp/go.tar.gz
+    wget --tries=5 --waitretry=10 --timeout=30 --no-check-certificate \
+         --user-agent="Ansible/{{ ansible_version }}" \
+         https://go.dev/dl/go1.20.4.linux-amd64.tar.gz -O /tmp/go.tar.gz
     tar -C /usr/local -xzf /tmp/go.tar.gz
   args:
     creates: /usr/local/go
